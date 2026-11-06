@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Роман Минин — «Внимание для художника» | Карта-граф</title>
   <meta name="description" content="Интерактивный нео-витражный квест по книге Романа Минина. 7 кристаллов внимания, система навигации шахтёра и Крест 4-х Валют.">
-  <link rel="stylesheet" href="styles.css?v=2.1">
+  <link rel="stylesheet" href="styles.css?v=2.2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -225,6 +225,15 @@
             <input type="text" class="form-input" id="input-ai-model" value="openai/gpt-oss-120b">
           </div>
 
+          <div style="margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--shell-border);">
+            <div style="font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">
+              Инструменты автора:
+            </div>
+            <button class="btn-modal-secondary" id="btn-toggle-editor-mode-modal" type="button" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              ✏️ Включить режим редактирования квестов
+            </button>
+          </div>
+
           <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
             <button class="btn-modal-secondary" id="btn-reset-ai-config" type="button">Сбросить</button>
             <button class="btn-modal-primary" id="btn-save-ai-config" type="button">Сохранить</button>
@@ -235,7 +244,7 @@
 
   </div>
 
-  <script src="data.js?v=2.1"></script>
-  <script src="app.js?v=2.1"></script>
+  <script src="data.js?v=2.2"></script>
+  <script src="app.js?v=2.2"></script>
 </body>
 </html>

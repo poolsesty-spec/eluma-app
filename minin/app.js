@@ -232,6 +232,165 @@ document.addEventListener("DOMContentLoaded", () => {
     return { ...defaultAiConfig, key: DEFAULT_EMBEDDED_KEY };
   }
 
+  // ─── UTF-8 Base64 Helpers for URL Sharing ───
+  function encodeBase64Utf8(str) {
+    try {
+      return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+        return String.fromCharCode('0x' + p1);
+      }));
+    } catch (e) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+  }
+
+  function decodeBase64Utf8(b64) {
+    try {
+      return decodeURIComponent(Array.prototype.map.call(atob(b64), (c) => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+    } catch (e) {
+      return decodeURIComponent(escape(atob(b64)));
+    }
+  }
+
+  // Toast notification
+  function showToast(message, duration = 3500) {
+    const existing = document.querySelector(".toast-alert");
+    if (existing) existing.remove();
+    const toast = document.createElement("div");
+    toast.className = "toast-alert";
+    toast.innerHTML = `<span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      toast.style.transition = "opacity 0.4s";
+      setTimeout(() => toast.remove(), 400);
+    }, duration);
+  }
+
+  function escapeHtml(text) {
+    if (!text) return "";
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // ─── Author Quest Overrides & Editor Mode ───
+  const CUSTOM_QUESTS_KEY = "minin_custom_quests_v1";
+  const EDITOR_MODE_KEY = "minin_editor_mode_active";
+
+  let isEditorMode = false;
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (
+      urlParams.get("edit") || 
+      urlParams.get("editor") || 
+      urlParams.get("author") || 
+      urlParams.get("mode") === "editor" ||
+      localStorage.getItem(EDITOR_MODE_KEY) === "1"
+    ) {
+      isEditorMode = true;
+      localStorage.setItem(EDITOR_MODE_KEY, "1");
+    }
+
+    // Auto-import shared draft from URL hash: #draft=<base64>
+    if (window.location.hash.startsWith("#draft=")) {
+      const b64 = window.location.hash.slice(7);
+      if (b64) {
+        const decodedJson = decodeBase64Utf8(b64);
+        const parsed = JSON.parse(decodedJson);
+        if (parsed && typeof parsed === "object") {
+          localStorage.setItem(CUSTOM_QUESTS_KEY, JSON.stringify(parsed));
+          isEditorMode = true;
+          localStorage.setItem(EDITOR_MODE_KEY, "1");
+          setTimeout(() => showToast("✓ Загружены авторские правки квестов по ссылке!"), 500);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Editor init error", e);
+  }
+
+  function getCustomOverrides() {
+    try {
+      const raw = localStorage.getItem(CUSTOM_QUESTS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {};
+  }
+
+  function applyCustomOverrides() {
+    const overrides = getCustomOverrides();
+    nodes.forEach(node => {
+      const ov = overrides[node.id];
+      if (!ov) return;
+      if (ov.title) node.title = ov.title;
+      if (ov.prompt) node.prompt = ov.prompt;
+      if (ov.revealQuote) node.revealQuote = ov.revealQuote;
+      if (Array.isArray(ov.options)) {
+        ov.options.forEach((opt, idx) => {
+          if (node.options[idx]) {
+            if (opt.text !== undefined) node.options[idx].text = opt.text;
+            if (opt.consequence !== undefined) node.options[idx].consequence = opt.consequence;
+          }
+        });
+      }
+    });
+  }
+
+  // Initial application of custom overrides
+  applyCustomOverrides();
+
+  // Floating Editor Mode Banner
+  function renderEditorBanner() {
+    if (!isEditorMode) return;
+    if (document.getElementById("editor-floating-banner")) return;
+
+    const banner = document.createElement("div");
+    banner.id = "editor-floating-banner";
+    banner.className = "editor-floating-banner";
+    banner.innerHTML = `
+      <span>✏️ Режим редактора квестов</span>
+      <button class="banner-btn-action" id="btn-banner-share" title="Скопировать ссылку со всеми правками">🔗 Поделиться ссылкой</button>
+      <button class="banner-btn-action" id="btn-banner-copy-json" title="Скопировать JSON">📋 JSON</button>
+      <button class="banner-btn-close" id="btn-banner-close" title="Выйти из режима редактора">✕</button>
+    `;
+    document.body.appendChild(banner);
+
+    banner.querySelector("#btn-banner-share").addEventListener("click", () => {
+      const overrides = getCustomOverrides();
+      const b64 = encodeBase64Utf8(JSON.stringify(overrides));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?edit=1#draft=${b64}`;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast("✓ Ссылка со всеми вашими правками скопирована!");
+      }).catch(() => {
+        prompt("Скопируйте ссылку с вашими правками:", shareUrl);
+      });
+    });
+
+    banner.querySelector("#btn-banner-copy-json").addEventListener("click", () => {
+      const overrides = getCustomOverrides();
+      const json = JSON.stringify(overrides, null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        showToast("✓ JSON всех правок скопирован в буфер обмена!");
+      }).catch(() => {
+        prompt("Скопируйте JSON:", json);
+      });
+    });
+
+    banner.querySelector("#btn-banner-close").addEventListener("click", () => {
+      localStorage.removeItem(EDITOR_MODE_KEY);
+      banner.remove();
+      isEditorMode = false;
+      showToast("Режим редактора выключен.");
+    });
+  }
+
+  renderEditorBanner();
+
   let gameState = loadGameState();
   let aiConfig = loadAiConfig();
 
@@ -846,6 +1005,153 @@ ${debateDirective}`;
     return cleanAuthorReply(fallbackText);
   }
 
+  // Author Inline Quest Editor
+  function renderQuestEditor(node, idx) {
+    openDrawer(`✏️ РЕДАКТИРОВАНИЕ • ${node.title}`, `
+      <div class="editor-form-box">
+        <div style="font-size: 13px; color: #475569; margin-bottom: 14px; line-height: 1.4;">
+          Отредактируйте ситуацию, варианты ответов и последствия. Изменения сохраняются и сразу применяются в игре.
+        </div>
+
+        <div class="editor-field-group">
+          <label class="editor-field-label">Название шага</label>
+          <input type="text" class="editor-field-input" id="edit-title" value="${escapeHtml(node.title)}">
+        </div>
+
+        <div class="editor-field-group">
+          <label class="editor-field-label">Ситуация (Дилемма)</label>
+          <textarea class="editor-field-textarea" id="edit-prompt" rows="3">${escapeHtml(node.prompt)}</textarea>
+        </div>
+
+        <!-- Option 0: Stone Trap -->
+        <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;">
+          <div style="font-size: 11px; font-weight: 800; color: #d97706; margin-bottom: 6px;">
+            🪨 ВАРИАНТ 1: ПОЛЮС КАМНЯ (ЛОВУШКА ГОРДОСТИ)
+          </div>
+          <div class="editor-field-group">
+            <label class="editor-field-label">Текст кнопки</label>
+            <input type="text" class="editor-field-input" id="edit-opt-0-text" value="${escapeHtml(node.options[0]?.text || '')}">
+          </div>
+          <div class="editor-field-group">
+            <label class="editor-field-label">Последствие выбора</label>
+            <textarea class="editor-field-textarea" id="edit-opt-0-conseq" rows="2">${escapeHtml(node.options[0]?.consequence || '')}</textarea>
+          </div>
+        </div>
+
+        <!-- Option 1: Water Trap -->
+        <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;">
+          <div style="font-size: 11px; font-weight: 800; color: #0284c7; margin-bottom: 6px;">
+            💧 ВАРИАНТ 2: ПОЛЮС ВОДЫ (ЛОВУШКА УСТУПКИ)
+          </div>
+          <div class="editor-field-group">
+            <label class="editor-field-label">Текст кнопки</label>
+            <input type="text" class="editor-field-input" id="edit-opt-1-text" value="${escapeHtml(node.options[1]?.text || '')}">
+          </div>
+          <div class="editor-field-group">
+            <label class="editor-field-label">Последствие выбора</label>
+            <textarea class="editor-field-textarea" id="edit-opt-1-conseq" rows="2">${escapeHtml(node.options[1]?.consequence || '')}</textarea>
+          </div>
+        </div>
+
+        <!-- Option 2: Master Move -->
+        <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;">
+          <div style="font-size: 11px; font-weight: 800; color: #059669; margin-bottom: 6px;">
+            🎯 ВАРИАНТ 3: ХОД МАСТЕРА (СТРУНА / ВНИМАНИЕ)
+          </div>
+          <div class="editor-field-group">
+            <label class="editor-field-label">Текст кнопки</label>
+            <input type="text" class="editor-field-input" id="edit-opt-2-text" value="${escapeHtml(node.options[2]?.text || '')}">
+          </div>
+          <div class="editor-field-group">
+            <label class="editor-field-label">Последствие выбора</label>
+            <textarea class="editor-field-textarea" id="edit-opt-2-conseq" rows="2">${escapeHtml(node.options[2]?.consequence || '')}</textarea>
+          </div>
+        </div>
+
+        <!-- Quote -->
+        <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px;">
+          <div class="editor-field-group">
+            <label class="editor-field-label">Цитата главы Романа Минина</label>
+            <textarea class="editor-field-textarea" id="edit-quote" rows="2">${escapeHtml(node.revealQuote || '')}</textarea>
+          </div>
+        </div>
+
+        <div class="editor-actions-row">
+          <button class="btn-editor-save" id="btn-save-quest-draft" type="button">💾 Сохранить квест</button>
+          <button class="btn-editor-share" id="btn-share-quest-draft" type="button">🔗 Поделиться ссылкой с правками</button>
+          <button class="btn-editor-reset" id="btn-reset-quest-draft" type="button">↺ Сбросить к оригиналу</button>
+          <button class="btn-editor-cancel" id="btn-cancel-quest-draft" type="button">✕ Отмена</button>
+        </div>
+      </div>
+    `);
+
+    const formBox = drawerContent.querySelector(".editor-form-box");
+    if (!formBox) return;
+
+    formBox.querySelector("#btn-save-quest-draft").addEventListener("click", () => {
+      const updatedTitle = formBox.querySelector("#edit-title").value.trim();
+      const updatedPrompt = formBox.querySelector("#edit-prompt").value.trim();
+      const opt0Text = formBox.querySelector("#edit-opt-0-text").value.trim();
+      const opt0Conseq = formBox.querySelector("#edit-opt-0-conseq").value.trim();
+      const opt1Text = formBox.querySelector("#edit-opt-1-text").value.trim();
+      const opt1Conseq = formBox.querySelector("#edit-opt-1-conseq").value.trim();
+      const opt2Text = formBox.querySelector("#edit-opt-2-text").value.trim();
+      const opt2Conseq = formBox.querySelector("#edit-opt-2-conseq").value.trim();
+      const updatedQuote = formBox.querySelector("#edit-quote").value.trim();
+
+      if (updatedTitle) node.title = updatedTitle;
+      if (updatedPrompt) node.prompt = updatedPrompt;
+      if (opt0Text && node.options[0]) node.options[0].text = opt0Text;
+      if (opt0Conseq && node.options[0]) node.options[0].consequence = opt0Conseq;
+      if (opt1Text && node.options[1]) node.options[1].text = opt1Text;
+      if (opt1Conseq && node.options[1]) node.options[1].consequence = opt1Conseq;
+      if (opt2Text && node.options[2]) node.options[2].text = opt2Text;
+      if (opt2Conseq && node.options[2]) node.options[2].consequence = opt2Conseq;
+      if (updatedQuote) node.revealQuote = updatedQuote;
+
+      const overrides = getCustomOverrides();
+      overrides[node.id] = {
+        title: node.title,
+        prompt: node.prompt,
+        revealQuote: node.revealQuote,
+        options: [
+          { text: node.options[0]?.text, consequence: node.options[0]?.consequence },
+          { text: node.options[1]?.text, consequence: node.options[1]?.consequence },
+          { text: node.options[2]?.text, consequence: node.options[2]?.consequence }
+        ]
+      };
+      localStorage.setItem(CUSTOM_QUESTS_KEY, JSON.stringify(overrides));
+      showToast("✓ Изменения квеста сохранены! Квест обновлён.");
+      openNodeModal(node, idx);
+    });
+
+    formBox.querySelector("#btn-share-quest-draft").addEventListener("click", () => {
+      formBox.querySelector("#btn-save-quest-draft").click();
+      const overrides = getCustomOverrides();
+      const b64 = encodeBase64Utf8(JSON.stringify(overrides));
+      const shareUrl = `${window.location.origin}${window.location.pathname}?edit=1#draft=${b64}`;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast("✓ Ссылка с вашими правками скопирована в буфер обмена! Отправьте её в Telegram.");
+      }).catch(() => {
+        prompt("Скопируйте ссылку с вашими правками:", shareUrl);
+      });
+    });
+
+    formBox.querySelector("#btn-reset-quest-draft").addEventListener("click", () => {
+      if (confirm("Сбросить этот квест к исходному тексту книги?")) {
+        const overrides = getCustomOverrides();
+        delete overrides[node.id];
+        localStorage.setItem(CUSTOM_QUESTS_KEY, JSON.stringify(overrides));
+        showToast("↺ Квест сброшен к оригиналу книги.");
+        window.location.reload();
+      }
+    });
+
+    formBox.querySelector("#btn-cancel-quest-draft").addEventListener("click", () => {
+      openNodeModal(node, idx);
+    });
+  }
+
   // Node Interaction Modal (Authentic dilemma + Dual-Track AI Dialogue)
   function openNodeModal(node, idx) {
     if (idx > gameState.unlockedIndex) {
@@ -863,7 +1169,12 @@ ${debateDirective}`;
 
     // 1-6 Perimeter Question Stage
     openDrawer(`ДИЛЕММА ${node.order} ИЗ 6 • ${node.tag}`, `
-      <h3 class="drawer-prompt">${node.title}</h3>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 4px;">
+        <h3 class="drawer-prompt" style="margin-bottom: 0;">${node.title}</h3>
+        <button class="${isEditorMode ? 'btn-open-editor' : 'btn-open-editor-subtle'}" id="btn-edit-quest-trigger" type="button" title="Редактировать формулировки квеста">
+          ✏️ ${isEditorMode ? 'Изменить квест' : 'Править'}
+        </button>
+      </div>
       <div class="drawer-situation">${node.prompt}</div>
 
       <div style="font-weight: 800; font-size: 11px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.8px;">
@@ -878,6 +1189,13 @@ ${debateDirective}`;
 
       <div id="step-result" style="display: none;"></div>
     `);
+
+    const btnEditQuest = drawerContent.querySelector("#btn-edit-quest-trigger");
+    if (btnEditQuest) {
+      btnEditQuest.addEventListener("click", () => {
+        renderQuestEditor(node, idx);
+      });
+    }
 
     const optBtns = drawerContent.querySelectorAll(".option-btn");
     const resultBox = drawerContent.querySelector("#step-result");
@@ -1503,6 +1821,35 @@ ${debateDirective}`;
       inputAiModel.value = aiConfig.model;
       toggleAiInputs();
       updateState();
+      modalAiSettings.style.display = "none";
+      updateObserverAttention(false);
+    });
+  }
+
+  // Toggle Editor Mode from AI Settings Modal
+  const btnToggleEditorModeModal = document.getElementById("btn-toggle-editor-mode-modal");
+  if (btnToggleEditorModeModal) {
+    const updateEditorBtnLabel = () => {
+      btnToggleEditorModeModal.textContent = isEditorMode 
+        ? "✕ Выключить режим редактора квестов" 
+        : "✏️ Включить режим редактора квестов";
+      btnToggleEditorModeModal.style.color = isEditorMode ? "#e11d48" : "#7c3aed";
+    };
+    updateEditorBtnLabel();
+
+    btnToggleEditorModeModal.addEventListener("click", () => {
+      isEditorMode = !isEditorMode;
+      if (isEditorMode) {
+        localStorage.setItem(EDITOR_MODE_KEY, "1");
+        renderEditorBanner();
+        showToast("✏️ Режим редактора квестов включён! Теперь у каждого квеста доступна кнопка 'Изменить квест'.");
+      } else {
+        localStorage.removeItem(EDITOR_MODE_KEY);
+        const b = document.getElementById("editor-floating-banner");
+        if (b) b.remove();
+        showToast("Режим редактора выключен.");
+      }
+      updateEditorBtnLabel();
       modalAiSettings.style.display = "none";
       updateObserverAttention(false);
     });
