@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: minin-attention-book
+    env: static
+    buildCommand: ""
+    staticPublishPath: ./sites/minin_attention_book
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

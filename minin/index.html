@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Роман Минин — «Внимание для художника» | Карта-граф</title>
+  <meta name="description" content="Интерактивный нео-витражный квест по книге Романа Минина. 7 кристаллов внимания, система навигации шахтёра и Крест 4-х Валют.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="app-root">
+
+    <!-- Top Minimalist Status Bar -->
+    <header class="top-nav-bar">
+      <div class="nav-pill-shell">
+        <div class="nav-pill-inner">
+          <div class="brand-mark">
+            <span class="mark-gem">✦</span>
+            <span class="mark-text">РОМАН МИНИН</span>
+          </div>
+          <div class="nav-divider"></div>
+          <div class="nav-status">
+            <span class="status-dot"></span>
+            <span>«ВНИМАНИЕ ДЛЯ ХУДОЖНИКА»</span>
+          </div>
+          <div class="nav-divider"></div>
+          <div class="nav-counter">
+            <span class="counter-label">СВЯЗИ:</span>
+            <span class="counter-value" id="hud-progress-text">0 / 6 РАЗВЕДАНО</span>
+          </div>
+          <div class="nav-divider"></div>
+          <div class="nav-lumens" id="hud-lumens-pill" title="Психическая кровь и энергия внимания (Гл. 20)">
+            ⚡ <span id="hud-lumens-val">40</span> Lm
+          </div>
+          <div class="nav-soul-state" id="hud-soul-pill" title="Агрегатное состояние души (Гл. 5)">
+            <span id="hud-soul-val">🎾 Ракетка</span>
+          </div>
+          <div class="nav-divider"></div>
+          <button class="nav-ai-btn" id="btn-ai-settings" type="button" title="Настройки ИИ-проводника">
+            <span class="ai-dot" id="ai-status-dot"></span>
+            <span id="ai-status-label">ИИ: Groq 120B</span>
+          </button>
+          <button class="nav-reset-btn" id="btn-reset-game" type="button" title="Сбросить прогресс и начать заново">↺</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Edge Book Card (С краю) -->
+    <aside class="edge-book-card" id="edge-book-card">
+      <div class="book-card-outer">
+        <div class="book-card-inner">
+          <div class="book-eyebrow">
+            <span class="badge-pill">КНИГА-ВИКТРИНА</span>
+            <span class="badge-edition">7 КРИСТАЛЛОВ</span>
+          </div>
+
+          <h1 class="book-title">ВНИМАНИЕ ДЛЯ ХУДОЖНИКА</h1>
+          <div class="book-author">Роман Минин • Трансмонументализм</div>
+
+          <div class="book-quote-box">
+            «В начале было слово как акт внимания к нам, живущим во времени... Цена человеческого внимания будет только возрастать.»
+          </div>
+
+          <!-- 6 Perimeter + 1 Center Gems Matrix -->
+          <div class="hex-gems-container">
+            <div class="hex-label">МАТРИЦА СУВЕРЕНИТЕТА (6 + ЯДРО):</div>
+            <div class="hex-gems-grid" id="hex-gems-grid">
+              <div class="hex-gem active" data-node="0" title="1. Удача">1</div>
+              <div class="hex-gem locked" data-node="1" title="2. Куколка">2</div>
+              <div class="hex-gem locked" data-node="2" title="3. Рынок">3</div>
+              <div class="hex-gem locked" data-node="3" title="4. Оптика">4</div>
+              <div class="hex-gem locked" data-node="4" title="5. Нейросеть">5</div>
+              <div class="hex-gem locked" data-node="5" title="6. Материалы">6</div>
+              <div class="hex-gem hex-core locked" data-node="core" title="7. Ядро: Крест Валют">✦</div>
+            </div>
+          </div>
+
+          <!-- Mini Compass for 4 Currencies (Chapter 23) -->
+          <div class="cross-compass-mini" id="cross-compass-mini">
+            <div class="hex-label">КОМПАС 4-Х ВАЛЮТ (ГЛАВА 23):</div>
+            <div class="cross-bars-grid">
+              <div class="cross-bar-item" title="Север: Выращивается годами в тишине цеха">
+                <span class="cross-pole">⬆️ УВАЖЕНИЕ</span>
+                <div class="cross-track"><div class="cross-fill respect" id="bar-respect" style="width: 50%"></div></div>
+              </div>
+              <div class="cross-bar-item" title="Запад: Высшая степень внимания">
+                <span class="cross-pole">⬅️ ЛЮБОВЬ</span>
+                <div class="cross-track"><div class="cross-fill love" id="bar-love" style="width: 50%"></div></div>
+              </div>
+              <div class="cross-bar-item" title="Восток: Свобода манёвра и материальная опора">
+                <span class="cross-pole">➡️ ДЕНЬГИ</span>
+                <div class="cross-track"><div class="cross-fill money" id="bar-money" style="width: 40%"></div></div>
+              </div>
+              <div class="cross-bar-item" title="Юг: Психическая кровь эпохи / Хайп">
+                <span class="cross-pole">⬇️ ВНИМАНИЕ</span>
+                <div class="cross-track"><div class="cross-fill attention" id="bar-attention" style="width: 45%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="book-footer-actions">
+            <button class="btn-play-all" id="btn-focus-active-step">
+              <span id="btn-action-label">Исследовать кристалл 1 →</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Central Interactive Graph-Map Canvas -->
+    <main class="graph-stage">
+      <div class="graph-frame-outer">
+        <div class="graph-frame-inner" id="graph-container">
+          
+          <!-- Background Artwork (Шахта & Витраж) -->
+          <div class="artwork-backdrop">
+            <img src="assets/hero.jpg" alt="Витражный Граф Внимания Романа Минина" class="artwork-img" id="artwork-img">
+            <div class="light-mist-overlay"></div>
+          </div>
+
+          <!-- Dynamic SVG Links Layer -->
+          <svg class="graph-svg-layer" id="graph-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="rayGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.9"/>
+                <stop offset="50%" stop-color="#06b6d4" stop-opacity="0.95"/>
+                <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.9"/>
+              </linearGradient>
+              <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3.5" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- Guide and Active Lines -->
+            <g id="svg-base-lines" opacity="0.3"></g>
+            <g id="svg-active-lines"></g>
+          </svg>
+
+          <!-- Interactive Node Beacons (6 perimeter + 1 center) -->
+          <div class="nodes-layer" id="nodes-layer">
+            <!-- Dynamically injected with exact geometry -->
+          </div>
+
+          <!-- Miner's First-Person HUD Dialogue Bubble (Всплывающая подсказка у шахтёра) -->
+          <div class="miner-hud-bubble idle-float" id="miner-hud-bubble" style="left: 20%; top: 62%;">
+            <button class="miner-bubble-close" id="btn-minimize-miner" type="button" title="Свернуть окно наблюдателя">✕</button>
+            <div class="miner-avatar">
+              <span class="miner-lamp-beam"></span>
+              <span class="miner-icon">👷‍♂️</span>
+            </div>
+            <div class="miner-dialogue-body">
+              <div class="miner-name-tag">НАБЛЮДАТЕЛЬ В ШТОЛЬНЕ:</div>
+              <p class="miner-speech" id="miner-speech-text">
+                «Мы в самом низу, у угольного пласта. Чтобы подняться к свету, начни с первого кристалла в породе — настрой Конструктор Удачи.»
+              </p>
+              <div class="miner-action-hint" id="miner-action-hint">
+                Нажмите на янтарный кристалл внизу (1) ↓
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Miner Beacon (появляется при скрытии/сворачивании наблюдателя) -->
+          <button class="miner-collapsed-beacon" id="btn-expand-miner" type="button" style="left: 20%; top: 62%; display: none;" title="Показать наблюдателя в штольне">
+            <span class="beacon-pulse"></span>
+            <span class="beacon-text">👷‍♂️ Штольня</span>
+          </button>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- Side Player Window (Стеклянное окно квеста и главы) -->
+    <aside class="player-drawer" id="player-drawer">
+      <div class="drawer-outer">
+        <div class="drawer-inner">
+          <div class="drawer-header">
+            <div class="drawer-tag" id="drawer-tag">ГЛАВА ИСПЫТАНИЯ</div>
+            <button class="drawer-close" id="drawer-close" title="Закрыть">✕</button>
+          </div>
+          <div class="drawer-body" id="drawer-content">
+            <!-- Dynamically injected -->
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- AI Settings Modal -->
+    <div class="modal-backdrop" id="modal-ai-settings" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title">🔑 Настройки ИИ-Проводника Романа Минина</div>
+          <button class="modal-close" id="btn-close-ai-modal" type="button">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
+            Выберите режим работы диалога с автором. По умолчанию уже подключён ультра-быстрый движок <strong>Groq (~0.2 сек)</strong> с ключом автора, но вы можете использовать свой API-ключ или встроенный сценарный канон без интернета.
+          </p>
+          
+          <label class="form-label" for="select-ai-provider">Провайдер:</label>
+          <select class="form-select" id="select-ai-provider">
+            <option value="groq" selected>⚡ Groq (Рекомендуется — Llama / GPT-OSS 120B, ~0.2с)</option>
+            <option value="gemini">✨ Google Gemini 2.5 Flash</option>
+            <option value="openai">🤖 OpenAI / OpenRouter Compatible</option>
+            <option value="scripted">📜 Встроенный канон книги (Мгновенно, без ключа)</option>
+          </select>
+
+          <div id="api-key-group" style="margin-top: 12px;">
+            <label class="form-label" for="input-ai-key">API Ключ:</label>
+            <input type="password" class="form-input" id="input-ai-key" placeholder="gsk_... или AIzaSy... или sk-...">
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+              Ключ сохраняется строго локально в вашем браузере (localStorage).
+            </div>
+          </div>
+
+          <div id="model-name-group" style="margin-top: 12px;">
+            <label class="form-label" for="input-ai-model">Модель:</label>
+            <input type="text" class="form-input" id="input-ai-model" value="openai/gpt-oss-120b">
+          </div>
+
+          <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn-modal-secondary" id="btn-reset-ai-config" type="button">Сбросить</button>
+            <button class="btn-modal-primary" id="btn-save-ai-config" type="button">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
